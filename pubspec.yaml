@@ -42,7 +42,6 @@ dependencies:
   intl: ^0.17.0
   google_maps_flutter: ^2.1.2
   url_launcher: ^6.0.20
-  flutter_tts: ^3.3.3
   audioplayers: ^0.20.1
   carousel_slider: ^4.0.0
   dio:
