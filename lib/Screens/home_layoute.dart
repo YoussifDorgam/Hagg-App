@@ -15,7 +15,7 @@ import 'package:hajjguide/model/data.dart';
 import 'package:hajjguide/model/product_model.dart';
 import '../Drawer&DrawerScreens/DrawerLayoute/drawer_screen.dart';
 import 'ahkamelhajj_screen.dart';
-import 'googlemap_screen.dart';
+import 'MapData/googlemap_screen.dart';
 import 'package:http/http.dart' as http;
 
 class HomeLayoute extends StatefulWidget {
@@ -51,7 +51,7 @@ class _HomeLayouteState extends State<HomeLayoute> {
                 ),
                 leading: IconButton(
                   onPressed: () {
-                    navigatorTo(context, GMap());
+                    navigatorTo(context, MapScreen());
                   },
                   icon: const FaIcon(FontAwesomeIcons.locationArrow,
                      ),

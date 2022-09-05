@@ -1,104 +1,95 @@
 import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:hajjguide/Screens/MapData/directions_model.dart';
+import 'package:hajjguide/Screens/MapData/directions_repository.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class GMap extends StatefulWidget {
-  GMap({Key? key}) : super(key: key);
-
+class MapScreen extends StatefulWidget {
   @override
-  _GMapState createState() => _GMapState();
+  _MapScreenState createState() => _MapScreenState();
 }
 
-class _GMapState extends State<GMap> {
-  Set<Marker> _markers = HashSet<Marker>();
-  Set<Polygon> _polygons = HashSet<Polygon>();
-  Set<Polyline> _polylines = HashSet<Polyline>();
-  Set<Circle> _circles = HashSet<Circle>();
-  bool _showMapStyle = false;
+class _MapScreenState extends State<MapScreen> {
+  static const _initialCameraPosition = CameraPosition(
+    target: LatLng(21.422503, 39.8262461),
+    zoom: 15,
+  );
 
-  GoogleMapController? _mapController;
-  BitmapDescriptor? _markerIcon;
+  GoogleMapController? _googleMapController;
+  Marker? _origin;
+  Marker? _destination;
+  Directions? _info;
 
   @override
-  void initState() {
-    super.initState();
-    _setMarkerIcon();
-    _setCircles();
+  void dispose() {
+    _googleMapController!.dispose();
+    super.dispose();
   }
-
-  void _setMarkerIcon() async {
-    _markerIcon = await BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(), 'assets/noodle_icon.png');
-  }
-
-  void toggleMapStyle() async {
-    String style = await DefaultAssetBundle.of(context)
-        .loadString('assets/map_style.json');
-
-    if (_showMapStyle) {
-      _mapController!.setMapStyle(style);
-    } else {
-      _mapController!.setMapStyle(null);
-    }
-  }
-
-  void _setCircles() {
-    _circles.add(
-      const Circle(
-          circleId: CircleId("0"),
-          center: LatLng(37.76493, -122.42432),
-          radius: 1000,
-          strokeWidth: 2,
-          fillColor: Color.fromRGBO(102, 51, 153, .5)),
-    );
-  }
-
-  void _onMapCreated(GoogleMapController controller) {
-    _mapController = controller;
-
-    setState(() {
-      _markers.add(
-        Marker(
-            markerId: const MarkerId("0"),
-            position: const LatLng(37.77483, -122.41942),
-            infoWindow: const InfoWindow(
-              title: "San Francsico",
-              snippet: "An Interesting city",
-            ),
-            icon: _markerIcon!),
-      );
-    });
-  }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
         backgroundColor: const Color(0xffE9EFC9),
         title: const Text('الخرائط',style: TextStyle(color: Colors.black),),
-        centerTitle: true,
       ),
       body: Stack(
         alignment: Alignment.bottomCenter,
         children: [
           GoogleMap(
-            onMapCreated: _onMapCreated,
-            initialCameraPosition: const CameraPosition(
-              target: LatLng(21.422503, 39.8262461),
-              zoom: 15,
-            ),
-           // mapType: MapType.satellite,
-            markers: _markers,
-            polygons: _polygons,
-            polylines: _polylines,
-            circles: _circles,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+            initialCameraPosition: _initialCameraPosition,
+            onMapCreated: (controller) => _googleMapController = controller,
+            markers: {
+              if (_origin != null) _origin!,
+              if (_destination != null) _destination!
+            },
+            polylines: {
+              if (_info != null)
+                Polyline(
+                  polylineId: const PolylineId('overview_polyline'),
+                  color: Colors.red,
+                  width: 5,
+                  points: _info!.polylinePoints
+                      .map((e) => LatLng(e.latitude, e.longitude))
+                      .toList(),
+                ),
+            },
+            onLongPress: _addMarker,
           ),
-           Padding(
+          if (_info != null)
+            Positioned(
+              top: 20.0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 6.0,
+                  horizontal: 12.0,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.yellowAccent,
+                  borderRadius: BorderRadius.circular(20.0),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black26,
+                      offset: Offset(0, 2),
+                      blurRadius: 6.0,
+                    )
+                  ],
+                ),
+                child: Text(
+                  '${_info!.totalDistance}, ${_info!.totalDuration}',
+                  style: const TextStyle(
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          Padding(
             padding: const EdgeInsets.all(8.0),
             child: InkWell(
               onTap: ()
@@ -108,8 +99,8 @@ class _GMapState extends State<GMap> {
               child: const Padding(
                 padding: EdgeInsets.all(8.0),
                 child: CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Color(0xffE9EFC9),
+                    radius: 30,
+                    backgroundColor: Color(0xffE9EFC9),
                     child: Icon(Icons.share,size: 30,color: Colors.black)),
               ),
             ),
@@ -118,7 +109,46 @@ class _GMapState extends State<GMap> {
       ),
     );
   }
+
+  void _addMarker(LatLng pos) async {
+    if (_origin == null || (_origin != null && _destination != null)) {
+      // Origin is not set OR Origin/Destination are both set
+      // Set origin
+      setState(() {
+        _origin = Marker(
+          markerId: const MarkerId('origin'),
+          infoWindow: const InfoWindow(title: 'Origin'),
+          icon:
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          position: pos,
+        );
+        // Reset destination
+        _destination = null;
+
+        // Reset info
+        _info = null;
+      });
+    } else {
+      // Origin is already set
+      // Set destination
+      setState(() {
+        _destination = Marker(
+          markerId: const MarkerId('destination'),
+          infoWindow: const InfoWindow(title: 'Destination'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          position: pos,
+        );
+      });
+
+      // Get directions
+      final directions = await DirectionsRepository()
+          .getDirections(origin: _origin!.position, destination: pos);
+      setState(() => _info = directions);
+    }
+  }
 }
+
+
 
 class MapUtils{
   MapUtils._();

@@ -8,7 +8,7 @@ import 'package:hajjguide/Drawer&DrawerScreens/aftowny_screen.dart';
 import 'package:hajjguide/Drawer&DrawerScreens/seha_screen.dart';
 import 'package:hajjguide/Drawer&DrawerScreens/tawareqphone_screen.dart';
 import 'package:hajjguide/Drawer&DrawerScreens/tawasol_scren.dart';
-import 'package:hajjguide/Screens/googlemap_screen.dart';
+import 'package:hajjguide/Screens/MapData/googlemap_screen.dart';
 import 'package:hajjguide/Screens/mnaskelhajj_screen.dart';
 import 'package:hajjguide/Screens/tawaf_screen.dart';
 import 'package:hajjguide/icons/my_app_icons_icons.dart';
@@ -138,7 +138,7 @@ class DrawerScreen extends StatelessWidget {
               'الخرائط',
               ontab: () => navigatorTo(
                 context,
-                GMap(),
+                MapScreen(),
               ),
             ),
             const Padding(
